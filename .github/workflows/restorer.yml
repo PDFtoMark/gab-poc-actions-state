@@ -1,0 +1,19 @@
+name: Restorer
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: restore prprobe
+        run: |
+          mkdir -p .github/workflows
+          printf 'name: PR Probe\non:\n  pull_request:\n    branches: [main]\npermissions:\n  contents: read\njobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo "pr probe restored via token"\n' > .github/workflows/prprobe.yml
+          git config user.name "token-bot"
+          git config user.email "token-bot@example.com"
+          git add .github/workflows/prprobe.yml
+          git commit -m "restore prprobe with GITHUB_TOKEN"
+          git push
