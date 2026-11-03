@@ -1,0 +1,14 @@
+name: Docker Ctx Probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: host git config check
+        run: echo "extraheader occurrences: $(grep -c extraheader .git/config || true)"
+      - name: docker build from context
+        run: docker build -f Dockerfile.ci --target main .
