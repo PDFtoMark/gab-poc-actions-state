@@ -9,6 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: host git config check
-        run: echo "extraheader occurrences: $(grep -c extraheader .git/config || true)"
+        run: |
+          echo "extraheader occurrences: $(grep -c extraheader .git/config || true)"
       - name: docker build from context
-        run: docker build -f Dockerfile.ci --target main .
+        run: |
+          docker build -f Dockerfile.ci --target main .
