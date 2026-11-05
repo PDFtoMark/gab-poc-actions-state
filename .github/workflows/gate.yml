@@ -1,0 +1,59 @@
+name: gab-ghaw-role-gate
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+permissions: {}
+jobs:
+  pre_activation:
+    runs-on: ubuntu-latest
+    outputs:
+      activated: ${{ steps.check.outputs.is_team_member }}
+      result: ${{ steps.check.outputs.result }}
+      perm: ${{ steps.check.outputs.user_permission }}
+    steps:
+      - name: Fetch the real gh-aw membership gate module
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gate"
+          base="https://raw.githubusercontent.com/github/gh-aw-actions/b078ca291c0c4d3f7bfb88b0f9a01dfb718671e3/setup/js"
+          curl -sSf --max-time 30 "$base/check_membership.cjs" -o "$RUNNER_TEMP/gate/check_membership.cjs"
+          curl -sSf --max-time 30 "$base/check_permissions_utils.cjs" -o "$RUNNER_TEMP/gate/check_permissions_utils.cjs"
+          curl -sSf --max-time 30 "$base/error_helpers.cjs" -o "$RUNNER_TEMP/gate/error_helpers.cjs"
+          printf 'module.exports={writeDenialSummary:async()=>{}};\n' > "$RUNNER_TEMP/gate/pre_activation_summary.cjs"
+      - name: Evaluate the exact Issue Triage role gate for an outside user
+        id: check
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          GATE_DIR: ${{ runner.temp }}/gate
+          GH_AW_REQUIRED_ROLES: "admin,maintainer,write,read"
+          SIMULATED_ACTOR: "lazyhacker6"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            global.core = core;
+            global.github = github;
+            global.context = {
+              eventName: 'issues',
+              actor: process.env.SIMULATED_ACTOR,
+              repo: { owner: context.repo.owner, repo: context.repo.repo },
+              payload: { issue: { number: 1, user: { login: process.env.SIMULATED_ACTOR } } },
+            };
+            const { main } = require(`${process.env.GATE_DIR}/check_membership.cjs`);
+            await main();
+      - name: Show gate decision
+        run: |
+          echo "actor=lazyhacker6 (non-collaborator, outside account)"
+          echo "required_roles=$GH_AW_REQUIRED_ROLES_OUT"
+          echo "activated=${{ steps.check.outputs.is_team_member }} result=${{ steps.check.outputs.result }} permission=${{ steps.check.outputs.user_permission }}"
+        env:
+          GH_AW_REQUIRED_ROLES_OUT: "admin,maintainer,write,read"
+  activation:
+    needs: pre_activation
+    if: needs.pre_activation.outputs.activated == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "ACTIVATED=true — in microsoft/mxc this is the job that checks out the repo, builds the prompt from the attacker's issue and starts GitHub Copilot CLI"
+        env:
+          TRIGGER_ACTOR: ${{ github.actor }}
