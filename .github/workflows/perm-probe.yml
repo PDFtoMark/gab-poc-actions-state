@@ -1,0 +1,22 @@
+name: perm-probe
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: probe permission api with zero-scope token
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const users = ['lazyhacker6','Ety60','no-such-user-xyz-98765'];
+            for (const u of users) {
+              try {
+                const r = await github.rest.repos.getCollaboratorPermissionLevel({owner: context.repo.owner, repo: context.repo.repo, username: u});
+                console.log(`RESULT ${u} status=200 permission=${r.data.permission} role=${r.data.role_name}`);
+              } catch (e) {
+                console.log(`RESULT ${u} status=${e.status} msg=${e.message}`);
+              }
+            }
